@@ -33,6 +33,7 @@ void _RegCloseHive( struct hive *h )
 void _InitHive( struct hive *h )
 {
 	h->base = NULL;
+	h->size = 0;
 
 	return;
 }
@@ -52,6 +53,7 @@ int _RegOpenHive( char *filename, struct hive *h )
 			/* Legge il file in memoria */
 			/* MMF ??? -_- */
 			h->base = (unsigned char *) malloc( hsize );
+			h->size = hsize;
 
 			fseek( hiveh, 0, SEEK_SET );
 
@@ -77,10 +79,12 @@ unsigned long parself( struct hive *h, char *t, unsigned long off )
 	int i;
 
 	l = read_lf( h, off );
+	if( l == NULL ) return -1;
 
 	for( i = 0; i < l->key_num; i++ )
-	{	
+	{
 		n = read_nk( h, l->hr[i].nk_offset + 0x1000 );
+		if( n == NULL ) continue;
 
 		if( !memcmp( t, n->key_name, n->name_len ) )
 			return l->hr[i].nk_offset;
@@ -96,6 +100,7 @@ int _RegOpenKey( struct hive *h, char *path, nk_hdr **nr )
 	unsigned long noff;
 
 	n = read_nk( h, 0x1020 );
+	if( n == NULL ) return -1;
 
 	if( n->id == NK_ID && n->type == NK_ROOT )
 	{
@@ -115,6 +120,7 @@ int _RegOpenKey( struct hive *h, char *path, nk_hdr **nr )
 					return -1;
 
 				n = read_nk( h, noff + 0x1000 );
+				if( n == NULL ) return -1;
 
 				t = strtok( NULL, "\\" );
 			}
@@ -138,6 +144,7 @@ int _RegQueryValue( struct hive *h, char *name, nk_hdr *nr, unsigned char **buff
 	DWORD *l;
 
 	l = read_valuelist( h, nr->value_off + 0x1000 );
+	if( l == NULL ) return -1;
 
 	*buff = NULL;
 	*len = 0;
@@ -145,6 +152,7 @@ int _RegQueryValue( struct hive *h, char *name, nk_hdr *nr, unsigned char **buff
 	for( i = 0; i < nr->value_cnt; i++ )
 	{
 		v = read_vk( h, l[i] + 0x1000 );
+		if( v == NULL ) continue;
 
 		if( !strcmp( name, v->value_name ) || (name == NULL && ( v->flag & 1 ) == 0 ) )
 		{
@@ -167,8 +175,10 @@ int _RegEnumKey( struct hive *h, nk_hdr *nr, unsigned int index, char *name, int
 	if( index < nr->subkey_num )
 	{
 		lf = read_lf( h, nr->lf_off + 0x1000 );
+		if( lf == NULL ) return -1;
 
 		nk = read_nk( h, lf->hr[index].nk_offset + 0x1000 );
+		if( nk == NULL ) return -1;
 
 		memcpy( name, nk->key_name, min( *namelen, nk->name_len ) );
 

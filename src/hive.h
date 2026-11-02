@@ -30,6 +30,7 @@
 struct hive
 {
 	unsigned char *base;
+	unsigned long size;
 };
 
 typedef struct _nk_hdr 
@@ -73,11 +74,24 @@ typedef struct _lf_hdr
 
 #define LF_ID	0x666C
 
-#define read_nk( hive, offset ) ( (nk_hdr*) (hive->base + offset + 4)  )
-#define read_lf( hive, offset ) ( (lf_hdr*) (hive->base + offset + 4)  )
-#define read_vk( hive, offset ) ( (vk_hdr*) (hive->base + offset + 4)  )
-#define read_valuelist( hive, offset ) ( (DWORD*) (hive->base + offset + 4)  )
-#define read_data( hive, offset ) ( (unsigned char*) ((hive)->base + offset + 4)  )
+#define HIVE_CHECK_OFFSET(hive, offset, minlen) \
+	((unsigned long)(offset) + 4 + (minlen) <= (hive)->size)
+
+#define read_nk( hive, offset ) \
+	( HIVE_CHECK_OFFSET(hive, offset, sizeof(nk_hdr)) ? \
+	  (nk_hdr*) (hive->base + offset + 4) : NULL )
+#define read_lf( hive, offset ) \
+	( HIVE_CHECK_OFFSET(hive, offset, sizeof(lf_hdr)) ? \
+	  (lf_hdr*) (hive->base + offset + 4) : NULL )
+#define read_vk( hive, offset ) \
+	( HIVE_CHECK_OFFSET(hive, offset, sizeof(vk_hdr)) ? \
+	  (vk_hdr*) (hive->base + offset + 4) : NULL )
+#define read_valuelist( hive, offset ) \
+	( HIVE_CHECK_OFFSET(hive, offset, sizeof(DWORD)) ? \
+	  (DWORD*) (hive->base + offset + 4) : NULL )
+#define read_data( hive, offset ) \
+	( HIVE_CHECK_OFFSET(hive, offset, 1) ? \
+	  (unsigned char*) ((hive)->base + offset + 4) : NULL )
 
 typedef struct _vk_hdr 
 {
