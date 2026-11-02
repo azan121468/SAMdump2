@@ -197,14 +197,19 @@ int main( int argc, char **argv )
 
         /* get the username */
         /* 0x10 username size 0xc username offset */
+        if( blen < 0xcc + 4 ) { free( keyname ); continue; }
         usernamelen = *(int*)(b + 0x10) >> 1;
         usernameoffset = b[0xc] + 0xcc;
+
+        if( usernamelen < 0 || usernameoffset + usernamelen * 2 > blen )
+            { free( keyname ); continue; }
 
         username = (char *) malloc(  usernamelen + 1 );
         wcstombs( username, (const wchar_t*)&b[usernameoffset], usernamelen );
 
         username[ usernamelen ] = 0;
 
+        if( blen < 0xa0 ) { free( username ); free( keyname ); continue; }
         hashesoffset = *(int *)(b + 0x9c ) + 0xcc;
 
         if( hashesoffset + 0x28 < blen )
